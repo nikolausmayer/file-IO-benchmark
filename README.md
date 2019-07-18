@@ -17,11 +17,14 @@ $ bash make-random-example-files.sh
 
 ## Usage
 
+**Do not run any other I/O or CPU load while running iobench!**
+
 ```
 $ iobench --infiles test-files.txt --jobs 4
 ```
 
 where `test-files.txt` is a one-path-per-line list of test files to be read, e.g.
+
 ```
 $ cd example-data
 $ bash make-random-example-files.sh
