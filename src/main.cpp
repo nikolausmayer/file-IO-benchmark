@@ -555,6 +555,10 @@ int main (int argc, char* argv[])
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
+
+  /// Stop workers
+  for (auto& w : workers)
+    w.Stop();
   
   return EXIT_SUCCESS;
 }
