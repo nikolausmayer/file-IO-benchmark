@@ -30,6 +30,9 @@ static std::vector<std::string> infilenames;
 static std::vector<std::string> outfilenames;
 
 
+/**
+ * Information about a system disk
+ */
 struct Disk {
   std::string name;
   size_t current_sectors_read;
@@ -37,6 +40,10 @@ struct Disk {
   size_t bytes_per_sector;
 };
 
+
+/**
+ * A module to get information about the current disk I/O speeds
+ */
 struct DisksIOInfo {
   DisksIOInfo()
     : m_state{InfoState_t::INIT}
@@ -157,6 +164,7 @@ struct DisksIOInfo {
 
 
 /**
+ * A module to get information about the current CPU usage
  * https://stackoverflow.com/a/64166
  */
 struct CPUUsageInfo {
@@ -214,19 +222,24 @@ struct CPUUsageInfo {
 };
 
 
+/**
+ * A parallelizable data-reader
+ */
 struct Worker {
   Worker(const std::vector<int>& indices) 
     : m_indices{indices},
       m_status{WorkerStatus_t::INIT},
       m_workmode{WorkMode_t::ONLY_READ},
-      m_done{0}
+      m_done{0},
+      m_worker_ID{s_running_workers_ID++}
   { }
 
   Worker(Worker&& rhs)
   {
-    m_indices = std::move(rhs.m_indices);
-    m_status  = rhs.m_status;
-    m_done    = rhs.m_done;
+    m_indices   = std::move(rhs.m_indices);
+    m_status    = rhs.m_status;
+    m_done      = rhs.m_done;
+    m_worker_ID = rhs.m_worker_ID;
   }
 
   void Start()
@@ -271,8 +284,6 @@ struct Worker {
       m_data_throughput_logger.AddSample(content.size());
     }
 
-    std::cout << "Worker finished." << std::endl;
-
     m_status = WorkerStatus_t::FINISHED;
   }
 
@@ -312,14 +323,55 @@ struct Worker {
   size_t m_done;
 
   FramesPerSecond::FPSEstimator m_data_throughput_logger;
+
+  int m_worker_ID;
+  static int s_running_workers_ID;
+};
+/// Initialize static field
+int Worker::s_running_workers_ID = 0;
+
+
+
+/**
+ * A simple statistics module
+ */
+struct Statistificator
+{
+  void addSample(float sample)
+  {
+    m_samples.push_back(sample);
+  }
+
+  float robustAverage() const
+  {
+    if (m_samples.size() < 100) {
+      std::cout << "! Statistificator only has " << m_samples.size() 
+                << " samples which is not really enough for reliable results!"
+                << std::endl;
+    }
+
+    /// Sort samples
+    std::vector<float> tmp{m_samples};
+    std::sort(tmp.begin(), tmp.end());
+
+    /// Compute average, leaving out the lowest/highest 5%
+    float result{0.f};
+    size_t sample_count{0};
+    for (size_t i = 0.05*tmp.size(); i < 0.95*tmp.size(); ++i) {
+      result += tmp[i];
+      ++sample_count;
+    }
+
+    return result / sample_count;
+  }
+
+  std::vector<float> m_samples;
 };
 
 
 
 int main (int argc, char* argv[])
 {
-  ///std::ios_base::sync_with_stdio(false);
-
   /// Command line options
   optparse::OptionParser parser;
   parser.add_option("-i", "--infiles")
@@ -461,6 +513,9 @@ int main (int argc, char* argv[])
     w.Start();
 
 
+  /**
+   * returns true IFF all workers are done
+   */
   auto allWorkersFinished = [&workers]() -> bool {
     return std::all_of(workers.begin(),
                        workers.end(),
@@ -472,29 +527,45 @@ int main (int argc, char* argv[])
   CPUUsageInfo cpu_info;
   /// Info about actual disk I/O speeds
   DisksIOInfo disks_info;
+  /// Print frequency
   Pacemaker::Pacemaker print_timer{1.f};
+  /// Print prettification
   TextDecorator::TextDecorator TD{true, false};
+  /// Simple data statistics
+  Statistificator read_speed_log;
+  /// Log execution time
+  Timer::Timer benchmark_time{false};
 
+  /**
+   * Print a horizontal "-----" line
+   */
   auto PrintHline = []() {
     for (size_t i = 0; i < 10; ++i)
       std::cout << "--------";
     std::cout << std::endl;
   };
 
+  /**
+   * Print column names
+   */
+  auto PrintHeaders = []() {
+    std::cout << "Progress\t"
+              << "read speed\t"
+              << "read speed\t"
+              << "CPU usage\t"
+              << "CPU usage\t"
+              << std::endl;
+    std::cout << "\t\t"
+              << "(total)\t\t"
+              << "(per worker)\t"
+              << "(total)\t\t"
+              << "(per worker)\t"
+              << std::endl;
+  };
+
   /// Output header
   PrintHline();
-  std::cout << "Progress\t"
-            << "read speed\t"
-            << "read speed\t"
-            << "CPU usage\t"
-            << "CPU usage\t"
-            << std::endl;
-  std::cout << "\t\t"
-            << "(total)\t\t"
-            << "(per worker)\t"
-            << "(total)\t\t"
-            << "(per worker)\t"
-            << std::endl;
+  PrintHeaders();
   PrintHline();
 
 
@@ -511,6 +582,8 @@ int main (int argc, char* argv[])
         throughput_sum += worker.getThroughput();
       }
 
+      read_speed_log.addSample(throughput_sum);
+
       const float cpu_usage{cpu_info.getTotalCPUUsage()};
 
       /// Bleh, ugly hack. My TextDecorator does not play well with the
@@ -519,12 +592,6 @@ int main (int argc, char* argv[])
       oss << std::setw(7) << std::setprecision(1) << std::fixed
           << throughput_sum / (1024*1024);
 
-      //std::cout << std::setw(6) << std::setprecision(2) << std::fixed
-      //          << static_cast<float>(100*done_sum)/infilenames.size() << "%"
-      //          << ", read @ " << TD.bold(oss.str() + " MB/s")
-      //          << ", CPU @ "
-      //          << std::setw(5) << std::setprecision(1) << std::fixed
-      //          << cpu_usage*100 << "%" << std::endl;
       std::cout << std::setw(7) << std::setprecision(2) << std::fixed
                 << static_cast<float>(100*done_sum)/infilenames.size() << "%\t"
                 << TD.bold(oss.str() + " MB/s") << "\t"
@@ -557,6 +624,23 @@ int main (int argc, char* argv[])
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
+
+  /// UX 101: If you have a progress indicator, make sure it shows "100%"
+  std::cout << " 100.00%" << std::endl;
+  PrintHline();
+  PrintHeaders();
+  PrintHline();
+
+  /// Print some statistics
+  std::cout << "Total execution time: " 
+            << benchmark_time.ElapsedSeconds() << " seconds"
+            << std::endl;
+  const float avg_read_speed{read_speed_log.robustAverage()/(1024*1024)};
+  std::cout << "Average cumulative reading speed: " 
+            << TD.red(TD.bold(avg_read_speed)) << TD.red(TD.bold(" MB/s"))
+            << std::endl;
+            
+                    
 
   /// Stop workers
   for (auto& w : workers)
