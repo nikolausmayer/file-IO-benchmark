@@ -271,10 +271,12 @@ struct Worker {
       m_data_throughput_logger.AddSample(content.size());
     }
 
+    std::cout << "Worker finished." << std::endl;
+
     m_status = WorkerStatus_t::FINISHED;
   }
 
-  size_t getProgress() const
+  size_t getDoneCount() const
   {
     return m_done;
   }
@@ -422,7 +424,7 @@ int main (int argc, char* argv[])
     const size_t slice_size{file_indices.size() / num_workers};
     for (size_t i = 0; i < num_workers; ++i) {
       size_t slice_point_a{slice_size * i};
-      size_t slice_point_b{std::max(slice_size * (i + 1) - 1,
+      size_t slice_point_b{std::min(slice_size * (i + 1) - 1,
                                     file_indices.size())};
       std::vector<int> slice(file_indices.begin() + slice_point_a,
                              file_indices.begin() + slice_point_b);
@@ -505,7 +507,7 @@ int main (int argc, char* argv[])
       size_t done_sum{0};
       float throughput_sum{0.f};
       for (auto& worker : workers) {
-        done_sum += worker.getProgress();
+        done_sum += worker.getDoneCount();
         throughput_sum += worker.getThroughput();
       }
 
