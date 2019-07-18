@@ -44,6 +44,11 @@ $ cat test-files
 **iobench** allows for multithreaded testing and measures the speed at which the test files are read. It also measures the actual disk speed to detect caching, and the current CPU usage to detect if the application is constrained by CPU (instead of by I/O as desired).
 
 
+## Notes
+
+**iobench** cannot detect caching on NFS or otherwise not-directy-attached filesystems.
+
+
 ## License
 
 **iobench** and all dependencies are under MIT license.
