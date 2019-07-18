@@ -1,4 +1,4 @@
-Hyper# iobench
+# iobench
 
 **iobench** is a tiny disk-I/O benchmarking tool.
 
