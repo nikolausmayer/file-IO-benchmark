@@ -48,7 +48,9 @@ $ cat test-files
 
 - **iobench** cannot detect caching on NFS or otherwise not-directy-attached filesystems.
 
-- Start with a sinple thread `--jobs 1` to get a feeling for how fast your system is. Then ramp up the thread count until **iobench** stops complaining about being CPU-constrained and you see that the cumulative reading speed stops increasing.
+- Start with a single thread (`--jobs 1`) to get a feeling for how fast your system is. Then ramp up the thread count until **iobench** stops complaining about being CPU-constrained and you see that the cumulative reading speed stops increasing.
+
+- If your dataset is small, you might find that **iobench** always complains about cached data. Increase your dataset or try to flush the cache by I/Oing on some other data!
 
 - **iobench** is written in C++ which may not be the best choice for fast raw file I/O, so **iobench is not a benchmark for singlethreaded I/O**! Its only purpose is to max out your disk by throwing loads of reading threads at it.
 
