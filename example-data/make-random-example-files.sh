@@ -30,7 +30,7 @@ fi
 ## Create random files ##
 #########################
 FILE_SIZE_MB=10;
-NUMBER_OF_FILES=10;
+NUMBER_OF_FILES=100;
 echo "Creating $NUMBER_OF_FILES random files with $FILE_SIZE_MB MB each...";
 file_index=0;
 while test $file_index -lt $NUMBER_OF_FILES; do
