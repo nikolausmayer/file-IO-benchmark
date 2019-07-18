@@ -1,4 +1,4 @@
-# iobench
+Hyper# iobench
 
 **iobench** is a tiny disk-I/O benchmarking tool.
 
@@ -51,6 +51,8 @@ $ cat test-files
 - Start with a single thread (`--jobs 1`) to get a feeling for how fast your system is. Then ramp up the thread count until **iobench** stops complaining about being CPU-constrained and you see that the cumulative reading speed stops increasing.
 
 - If your dataset is small, you might find that **iobench** always complains about cached data. Increase your dataset or try to flush the cache by I/Oing on some other data!
+
+- **iobench** often complains about cached data in the beginning, but will "converge" to real speeds after a short while.
 
 - **iobench** is written in C++ which may not be the best choice for fast raw file I/O, so **iobench is not a benchmark for singlethreaded I/O**! Its only purpose is to max out your disk by throwing loads of reading threads at it.
 
