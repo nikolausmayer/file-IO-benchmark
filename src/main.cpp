@@ -397,6 +397,21 @@ struct Statistificator
     m_samples.push_back(sample);
   }
 
+  /**
+   * Mean
+   */
+  float average() const
+  {
+    float result{0.f};
+    for (size_t i = 0; i < m_samples.size(); ++i) {
+      result += m_samples[i];
+    }
+    return result/m_samples.size();
+  }
+
+  /**
+   * Mean without 5% highest / lowest outliers
+   */
   float robustAverage() const
   {
     if (m_samples.size() < 100) {
@@ -420,13 +435,65 @@ struct Statistificator
     return result / sample_count;
   }
 
+  /**
+   * Minimum
+   */
+  float min() const
+  {
+    float result{std::numeric_limits<float>::max()};
+    for (auto v : m_samples)
+      if (v < result)
+        result = v;
+    return result;
+  }
+
+  /**
+   * Minimum, but ignore the first 2 values because those are often skewed by
+   * program init overhead.
+   */
+  float robustMin() const
+  {
+    if (m_samples.size() < 3) {
+      std::cerr << "Too few samples!" << std::endl;
+      return -1.f;
+    }
+
+    float result{std::numeric_limits<float>::max()};
+    for (size_t i = 2; i < m_samples.size(); ++i)
+      if (m_samples[i] < result)
+        result = m_samples[i];
+    return result;
+  }
+
   std::vector<float> m_samples;
 };
 
 
 
+/**
+ * Wrap a string in a pretty gift box
+ */
+std::string Boxify(const std::string& content)
+{
+  size_t length{content.size()};
+  std::ostringstream oss;
+  oss << "╭"; for (size_t i = 0; i < length; ++i) oss << "─"; oss << "╮\n";
+  oss << "│";                oss << content;                  oss << "│\n"; 
+  oss << "╰"; for (size_t i = 0; i < length; ++i) oss << "─"; oss << "╯";
+  return oss.str();
+}
+
+
+
 int main (int argc, char* argv[])
 {
+  /// Print prettification
+  TextDecorator::TextDecorator TD{true, false};
+
+  std::cout << Boxify("                              "
+                      "iobench"
+                      "                              ") << std::endl;
+
   /// Command line options
   optparse::OptionParser parser;
   parser.add_option("-i", "--infiles")
@@ -515,7 +582,8 @@ int main (int argc, char* argv[])
     file_indices.push_back(i);
 
 
-  std::cout << "Parsed " << file_indices.size() << " infilenames." << std::endl;
+  std::cout << "Parsed " << TD.bold(file_indices.size()) << " entries."
+            << std::endl;
 
   auto RNG = std::default_random_engine{std::random_device{}()};
 
@@ -531,7 +599,7 @@ int main (int argc, char* argv[])
   std::cout << "Spawning " << num_workers << " worker threads..." << std::endl;
   if (options["workload-split"] == "separate") {
     /// Distribute work equally among all workers
-    std::cout << "Workload is equally distributed among all workers"
+    std::cout << "Workload will be equally distributed among all workers."
               << std::endl;
     const size_t slice_size{file_indices.size() / num_workers};
     for (size_t i = 0; i < num_workers; ++i) {
@@ -545,14 +613,14 @@ int main (int argc, char* argv[])
   } else if (options["workload-split"] == "overlap") {
     /// All workers use the same data, but each worker uses an individual
     /// randomized sequence
-    std::cout << "Workload is the same for all workers, but random for each"
+    std::cout << "Workload is the same for all workers, but random for each."
               << std::endl;
     std::vector<int> copy{file_indices};
     std::shuffle(copy.begin(), copy.end(), RNG);
     workers.emplace_back(std::move(Worker{copy}));
   } else if (options["workload-split"] == "same") {
     /// All workers use the same data sequence
-    std::cout << "Workload is exactly the same for all workers" << std::endl;
+    std::cout << "Workload is exactly the same for all workers." << std::endl;
     for (size_t i = 0; i < num_workers; ++i) {
       workers.emplace_back(std::move(Worker{file_indices}));
     }
@@ -594,8 +662,6 @@ int main (int argc, char* argv[])
   DisksIOInfo disks_info;
   /// Print frequency
   Pacemaker::Pacemaker print_timer{1.f};
-  /// Print prettification
-  TextDecorator::TextDecorator TD{true, false};
   /// Simple data statistics
   Statistificator read_speed_log;
   /// Log execution time
@@ -711,6 +777,10 @@ int main (int argc, char* argv[])
   const float avg_read_speed{read_speed_log.robustAverage()/(1024*1024)};
   std::cout << "Average cumulative reading speed: " 
             << TD.red(TD.bold(avg_read_speed)) << TD.red(TD.bold(" MB/s"))
+            << std::endl;
+  const float min_read_speed{read_speed_log.robustMin()/(1024*1024)};
+  std::cout << "Minimum cumulative reading speed: " 
+            << TD.red(TD.bold(min_read_speed)) << TD.red(TD.bold(" MB/s"))
             << std::endl;
             
                     

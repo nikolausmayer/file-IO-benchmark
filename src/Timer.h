@@ -206,7 +206,7 @@ namespace Timer {
     m_msg(msg)
   {
     Reset();
-  };
+  }
   
   /// Destructor
   inline Timer::~Timer()
