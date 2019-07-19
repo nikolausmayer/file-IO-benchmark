@@ -240,9 +240,7 @@ struct Worker {
       m_workmode{WorkMode_t::ONLY_READ},
       m_done{0},
       m_worker_ID{s_running_workers_ID++}
-  {
-    std::cout << "Worker: " << m_worker_ID << ": " << m_indices.size() << std::endl;
-  }
+  { }
 
   Worker(Worker&& rhs)
   {
