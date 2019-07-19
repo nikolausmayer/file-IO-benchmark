@@ -235,7 +235,9 @@ struct Worker {
       m_workmode{WorkMode_t::ONLY_READ},
       m_done{0},
       m_worker_ID{s_running_workers_ID++}
-  { }
+  {
+    std::cout << "Worker: " << m_worker_ID << ": " << m_indices.size() << std::endl;
+  }
 
   Worker(Worker&& rhs)
   {
@@ -622,12 +624,16 @@ int main (int argc, char* argv[])
     /// Print info or sleep
     if (print_timer.IsDue()) {
 
+
       /// Get progress and throughput per worker
       float done_sum{0.f};
       float throughput_sum{0.f};
+      size_t active_workers{0};
       for (auto& worker : workers) {
         done_sum += worker.getDoneCount();
         throughput_sum += worker.getThroughput();
+        if (not worker.isDone())
+          ++active_workers;
       }
       if (options["workload-split"] == "overlap" or
           options["workload-split"] == "same") {
@@ -648,15 +654,15 @@ int main (int argc, char* argv[])
                 << static_cast<float>(100*done_sum)/infilenames.size() << "%\t"
                 << TD.bold(oss.str() + " MB/s") << "\t"
                 << std::setw(7) << std::setprecision(1) << std::fixed
-                << throughput_sum / (1024*1024) / num_workers << " MB/s\t"
+                << throughput_sum / (1024*1024) / active_workers << " MB/s\t"
                 << std::setw(7) << std::setprecision(1) << std::fixed
                 << cpu_usage*100 << "%\t"
                 << std::setw(7) << std::setprecision(1) << std::fixed
-                << cpu_usage*100/num_workers << "%\t" << std::endl;
+                << cpu_usage*100/active_workers << "%\t" << std::endl;
 
       /// Check if benchmarking is constrained by CPU (which would be bad)
       //if (cpu_usage >= 0.9*cpu_info.getNumberOfCPUs()) {
-      if (cpu_usage >= 0.9*num_workers) {
+      if (cpu_usage >= 0.9*active_workers) {
         std::cout << "     " << TD.red(TD.bold("!!!")) << " " 
                   << "(benchmark might be CPU-constrained; use more workers!)"
                   << std::endl;
