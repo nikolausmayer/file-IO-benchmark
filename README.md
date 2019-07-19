@@ -48,7 +48,7 @@ $ cat test-files
 
 - **iobench** does not care which kind of files it is given, or how big they are, or how homogeneous. **iobench** only reads the raw file into memory and counts its bytes. It is probably a good idea to **not give iobench files whose size times the number of threads approaches your RAM size**.
 
-- **iobench** cannot detect caching on NFS or otherwise not-directy-attached filesystems.
+- **iobench** cannot detect caching on NFS or otherwise not-directy-attached filesystems (it reads information from `/proc/diskstats`).
 
 - Start with a single thread (`--jobs 1`) to get a feeling for how fast your system is. Then ramp up the thread count until **iobench** stops complaining about being CPU-constrained and you see that the cumulative reading speed stops increasing.
 
