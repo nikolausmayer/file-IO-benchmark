@@ -34,10 +34,12 @@ NUMBER_OF_FILES=100;
 echo "Creating $NUMBER_OF_FILES random files with $FILE_SIZE_MB MB each...";
 file_index=0;
 while test $file_index -lt $NUMBER_OF_FILES; do
+  printf ".";
   filename=`printf "%20d.bin" $file_index`;
   touch $filename && $SHRED -n 1 -s ${FILE_SIZE_MB}M $filename;
   file_index=`expr $file_index + 1`;
 done
+printf "\n";
 
 
 #############################################

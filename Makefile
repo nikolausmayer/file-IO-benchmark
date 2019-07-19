@@ -67,3 +67,14 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDE_DIRS) -c $< -o $@
 
 
+
+
+data: example-data/make-random-example-files.sh
+	$(info ... generating random files ...)
+	cd example-data && bash make-random-example-files.sh
+
+dataclean: example-data/cleanup.sh
+	$(info ... deleting random files ...)
+	cd example-data && bash cleanup.sh
+
+

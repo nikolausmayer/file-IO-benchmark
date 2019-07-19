@@ -11,8 +11,9 @@ set -o pipefail
 shopt -s failglob
 
 
-find . -name "*bin" -type f -delete;
-find . -name "test-files.txt" -delete;
+find . -name "*bin" -type f -exec rm {} \; -exec printf "." \;;
+printf "\n";
+find . -name "test-files.txt" -exec rm {} \;;
 
 
 exit `:`;

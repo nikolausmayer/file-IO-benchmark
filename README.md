@@ -6,12 +6,7 @@
 
 Just `make`.
 
-If you need test data, this will create 100 files with 10 MB of randomness each:
-
-```
-$ cd example-data
-$ bash make-random-example-files.sh
-```
+If you need test data, `make data` will create 100 files with 10 MB of randomness each. This data can be removed again using `make dataclean`.
 
 **The more data, the better!** The benchmark will be useless if all data is read from RAM or disk cache.
 
