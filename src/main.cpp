@@ -672,7 +672,7 @@ int main (int argc, char* argv[])
    */
   auto PrintHline = []() {
     for (size_t i = 0; i < 10; ++i)
-      std::cout << "--------";
+      std::cout << "────────";
     std::cout << std::endl;
   };
 
