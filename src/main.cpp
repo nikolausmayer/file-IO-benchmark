@@ -279,16 +279,28 @@ struct Worker {
       if (m_workmode == WorkMode_t::ONLY_READ or
           m_workmode == WorkMode_t::READ_AND_WRITE) {
         /// Open random file
+
         ifs.open(infilenames[random_index], std::ifstream::binary);
         if (ifs.bad() or not ifs.is_open()) {
           std::cerr << "Cannot read" << infilenames[random_index] 
                     << std::endl;
           continue;
         }
+        ifs.seekg(0, std::ios_base::end);
+        const auto length{ifs.tellg()};
+        ifs.seekg(0, std::ios_base::beg);
+        content.resize(length);
+        ifs.read((char*)&(content.c_str()[0]), length);
 
-        /// Read entire file content
-        content = std::string{std::istreambuf_iterator<char>(ifs),
-                              std::istreambuf_iterator<char>()};
+        //ifs.open(infilenames[random_index], std::ifstream::binary);
+        //if (ifs.bad() or not ifs.is_open()) {
+        //  std::cerr << "Cannot read" << infilenames[random_index] 
+        //            << std::endl;
+        //  continue;
+        //}
+        ///// Read entire file content
+        //content = std::string{std::istreambuf_iterator<char>(ifs),
+        //                      std::istreambuf_iterator<char>()};
 
         ifs.close();
       }
