@@ -29,6 +29,9 @@
 static std::vector<std::string> infilenames;
 static std::vector<std::string> outfilenames;
 
+/// Command-line options
+optparse::Values options;
+
 
 /**
  * Information about a system disk
@@ -267,18 +270,48 @@ struct Worker {
 
       ++m_done;
 
-      /// Open random file
-      std::ifstream ifs{infilenames[random_index], std::ifstream::binary};
-      if (ifs.bad() or not ifs.is_open()) {
-        std::cerr << "Bad file: " << infilenames[random_index] << std::endl;
-        continue;
+      std::ifstream ifs;
+      std::string content;
+      std::ofstream ofs;
+
+      if (m_workmode == WorkMode_t::ONLY_READ or
+          m_workmode == WorkMode_t::READ_AND_WRITE) {
+        /// Open random file
+        ifs.open(infilenames[random_index], std::ifstream::binary);
+        if (ifs.bad() or not ifs.is_open()) {
+          std::cerr << "Cannot read" << infilenames[random_index] 
+                    << std::endl;
+          continue;
+        }
+
+        /// Read entire file content
+        content = std::string{std::istreambuf_iterator<char>(ifs),
+                              std::istreambuf_iterator<char>()};
+
+        ifs.close();
       }
+      if (m_workmode == WorkMode_t::ONLY_WRITE) {
+        content.resize(std::stoi(options["write-size"]));
 
-      /// Read entire file content
-      std::string content{std::istreambuf_iterator<char>(ifs),
-                          std::istreambuf_iterator<char>()};
-
-      ifs.close();
+        ofs.open(outfilenames[random_index], std::ofstream::binary);
+        if (ofs.bad() or not ofs.is_open()) {
+          std::cerr << "Cannot write " << outfilenames[random_index] 
+                    << std::endl;
+          continue;
+        }
+        ofs.write(content.c_str(), content.size());
+        ofs.close();
+      }
+      if (m_workmode == WorkMode_t::READ_AND_WRITE) {
+        ofs.open(outfilenames[random_index], std::ofstream::binary);
+        if (ofs.bad() or not ofs.is_open()) {
+          std::cerr << "Cannot write " << outfilenames[random_index] 
+                    << std::endl;
+          continue;
+        }
+        ofs.write(content.c_str(), content.size());
+        ofs.close();
+      }
       
       /// Log data
       m_data_throughput_logger.AddSample(content.size());
@@ -315,6 +348,11 @@ struct Worker {
     READ_AND_WRITE,
     DONT_DO_SHIT,
   };
+
+  void setMode(WorkMode_t mode)
+  {
+    m_workmode = mode;
+  }
 
   std::vector<int> m_indices;
   WorkerStatus_t m_status;
@@ -389,7 +427,7 @@ int main (int argc, char* argv[])
         .choices({"separate", "overlap", "same"})
         .set_default("separate")
         .dest("workload-split")
-        .help("how files are split between workers");
+        .help("how files are split between workers ([\"separate\"] / \"overlap\" / \"same\")");
   parser.add_option("-r", "--randomize-files")
         .action("store_true")
         .set_default(false)
@@ -399,8 +437,13 @@ int main (int argc, char* argv[])
         .choices({"read", "write", "readwrite"})
         .set_default("read")
         .dest("mode")
-        .help("Benchmark mode (only read / only write / read and write)");
-  optparse::Values options{parser.parse_args(argc, argv)};
+        .help("Benchmark mode ([\"read\"] / \"write\" / \"readwrite\")");
+  parser.add_option("-w", "--write-size")
+        .type("int")
+        .set_default("1048576") /*1MiB*/
+        .dest("write-size")
+        .help("how many bytes to write per target file if --mode=\"write\"");
+  options = parser.parse_args(argc, argv);
 
 
   /// Parse filenames for reading
@@ -487,16 +530,9 @@ int main (int argc, char* argv[])
     /// randomized sequence
     std::cout << "Workload is the same for all workers, but random for each"
               << std::endl;
-    const size_t slice_size{file_indices.size() / num_workers};
-    for (size_t i = 0; i < num_workers; ++i) {
-      size_t slice_point_a{slice_size * i};
-      size_t slice_point_b{std::max(slice_size * (i + 1) - 1,
-                                    file_indices.size())};
-      std::vector<int> slice(file_indices.begin() + slice_point_a,
-                             file_indices.begin() + slice_point_b);
-      std::shuffle(slice.begin(), slice.end(), RNG);
-      workers.emplace_back(std::move(Worker{slice}));
-    }
+    std::vector<int> copy{file_indices};
+    std::shuffle(copy.begin(), copy.end(), RNG);
+    workers.emplace_back(std::move(Worker{copy}));
   } else if (options["workload-split"] == "same") {
     /// All workers use the same data sequence
     std::cout << "Workload is exactly the same for all workers" << std::endl;
@@ -509,8 +545,20 @@ int main (int argc, char* argv[])
   }
  
   /// Start workers
-  for (auto& w : workers)
+  for (auto& w : workers) {
+    if (options["mode"] == "read") {
+      w.setMode(Worker::WorkMode_t::ONLY_READ);
+    } else if (options["mode"] == "write") {
+      w.setMode(Worker::WorkMode_t::ONLY_WRITE);
+    } else if (options["mode"] == "readwrite") {
+      w.setMode(Worker::WorkMode_t::READ_AND_WRITE);
+    } else {
+      std::cerr << "Unhandled choice for \"mode\"" << std::endl;
+      return EXIT_FAILURE;
+    }
+
     w.Start();
+  }
 
 
   /**
@@ -550,8 +598,8 @@ int main (int argc, char* argv[])
    */
   auto PrintHeaders = []() {
     std::cout << "Progress\t"
-              << "read speed\t"
-              << "read speed\t"
+              << "speed\t\t"
+              << "speed\t\t"
               << "CPU usage\t"
               << "CPU usage\t"
               << std::endl;
@@ -575,11 +623,15 @@ int main (int argc, char* argv[])
     if (print_timer.IsDue()) {
 
       /// Get progress and throughput per worker
-      size_t done_sum{0};
+      float done_sum{0.f};
       float throughput_sum{0.f};
       for (auto& worker : workers) {
         done_sum += worker.getDoneCount();
         throughput_sum += worker.getThroughput();
+      }
+      if (options["workload-split"] == "overlap" or
+          options["workload-split"] == "same") {
+        done_sum /= num_workers;
       }
 
       read_speed_log.addSample(throughput_sum);
@@ -615,7 +667,7 @@ int main (int argc, char* argv[])
       const size_t actual_disk_speed{disks_info.getFastestDiskRead()};
       if (throughput_sum > 1.1 * actual_disk_speed) {
         std::cout << "     " << TD.red(TD.bold("!!!")) << " " 
-                  << "(actual disk is much slower ("
+                  << "(actual disk reading is much slower ("
                   << actual_disk_speed / (1024*1024) << "MB/s); "
                   << "data may be cached!)"
                   << std::endl;
