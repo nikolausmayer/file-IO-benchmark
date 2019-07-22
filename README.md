@@ -22,7 +22,7 @@ where `test-files.txt` is a one-path-per-line list of test files to be read, e.g
 
 ```
 $ cd example-data
-$ bash make-random-example-files.sh
+$ bash make-random-example-files.sh --file-size 10MB --number-of-files 10
 $ cat test-files
 ./example-data/0000.bin
 ./example-data/0001.bin
@@ -34,6 +34,17 @@ $ cat test-files
 ./example-data/0007.bin
 ./example-data/0008.bin
 ./example-data/0009.bin
+$ du -sh ./example-data/*bin
+2,0M    ./example-data/0000.bin
+2,0M    ./example-data/0001.bin
+2,0M    ./example-data/0002.bin
+2,0M    ./example-data/0003.bin
+2,0M    ./example-data/0004.bin
+2,0M    ./example-data/0005.bin
+2,0M    ./example-data/0006.bin
+2,0M    ./example-data/0007.bin
+2,0M    ./example-data/0008.bin
+2,0M    ./example-data/0009.binV
 ```
 
 **iobench** allows for multithreaded testing and measures the speed at which the test files are read. It also measures the actual disk speed to detect caching, and the current CPU usage to detect if the application is constrained by CPU (instead of by I/O as desired).
