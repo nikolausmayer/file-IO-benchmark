@@ -556,6 +556,8 @@ int main (int argc, char* argv[])
       infilenames.push_back(tmp);
     }
 
+    std::cout << "Inputs: " << options["infiles"] << std::endl;
+
     if (options["mode"] == "write") {
       std::cout << "Ignoring --infiles because --mode=write is set" 
                 << std::endl;
@@ -575,6 +577,8 @@ int main (int argc, char* argv[])
         break;
       outfilenames.push_back(tmp);
     }
+
+    std::cout << "Outputs: " << options["outfiles"] << std::endl;
 
     if (options["mode"] == "read") {
       std::cout << "Ignoring --outfiles because --mode=read is set" 
