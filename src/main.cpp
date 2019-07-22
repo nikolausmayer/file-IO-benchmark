@@ -527,6 +527,11 @@ int main (int argc, char* argv[])
         .set_default("1048576") /*1MiB*/
         .dest("write-size")
         .help("how many bytes to write per target file if --mode=\"write\"");
+  parser.add_option("-l", "--logfile")
+        .type("string")
+        .set_default("log.txt")
+        .dest("logfile")
+        .help("detailed logfile destination");
   options = parser.parse_args(argc, argv);
 
 
@@ -580,6 +585,15 @@ int main (int argc, char* argv[])
   for (size_t i = 0; i < std::max(infilenames.size(), 
                                   outfilenames.size()); ++i)
     file_indices.push_back(i);
+
+
+  if (options["mode"] == "read") {
+    std::cout << TD.bold("READ") << " mode." << std::endl;
+  } else if (options["mode"] == "write") {
+    std::cout << TD.bold("WRITE") << " mode." << std::endl;
+  } else if (options["mode"] == "readwrite") {
+    std::cout << TD.bold("READ-WRITE") << " mode." << std::endl;
+  }
 
 
   std::cout << "Parsed " << TD.bold(file_indices.size()) << " entries."
@@ -700,22 +714,42 @@ int main (int argc, char* argv[])
   PrintHline();
 
 
+  /// Open logfile
+  std::ofstream LOG(options["logfile"]);
+  if (LOG.bad() or not LOG.is_open()) {
+    std::cerr << "Could not write to logfile \"" << options["logfile"] << "\"!"
+              << std::endl;
+    LOG.close();
+    LOG.open("/dev/null");
+  }
+  LOG << std::fixed;
+
+
   while (not allWorkersFinished()) {
 
     /// Print info or sleep
     if (print_timer.IsDue()) {
 
+      LOG << benchmark_time.ElapsedSeconds()
+          << '\t' << num_workers;
 
       /// Get progress and throughput per worker
       float done_sum{0.f};
       float throughput_sum{0.f};
       size_t active_workers{0};
       for (auto& worker : workers) {
-        done_sum += worker.getDoneCount();
-        throughput_sum += worker.getThroughput();
+        const size_t worker_done{worker.getDoneCount()};
+        const float worker_throughput{worker.getThroughput()};
+        LOG << '\t' << worker_done
+            << '\t' << worker_throughput;
+        
+        done_sum += worker_done;
+        throughput_sum += worker_throughput;
         if (not worker.isDone())
           ++active_workers;
       }
+      LOG << '\t' << done_sum
+          << '\t' << throughput_sum;
       if (options["workload-split"] == "overlap" or
           options["workload-split"] == "same") {
         done_sum /= num_workers;
@@ -724,6 +758,7 @@ int main (int argc, char* argv[])
       read_speed_log.addSample(throughput_sum);
 
       const float cpu_usage{cpu_info.getTotalCPUUsage()};
+      LOG << '\t' << cpu_usage;
 
       /// Bleh, ugly hack. My TextDecorator does not play well with the
       /// iomanip things, so we have to pre-format the number.
@@ -759,10 +794,15 @@ int main (int argc, char* argv[])
                   << "data may be cached!)"
                   << std::endl;
       }
+
+      LOG << '\n';
     } else {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
+
+  if (LOG.is_open())
+    LOG.close();
 
   /// UX 101: If you have a progress indicator, make sure it shows "100%"
   std::cout << " 100.00%" << std::endl;
