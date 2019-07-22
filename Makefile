@@ -71,7 +71,7 @@ $(TARGET): $(OBJS)
 
 data: example-data/make-random-example-files.sh
 	$(info ... generating random files ...)
-	cd example-data && bash make-random-example-files.sh
+	cd example-data && bash make-random-example-files.sh --file-size 10M --number-of-files 100
 
 dataclean: example-data/cleanup.sh
 	$(info ... deleting random files ...)

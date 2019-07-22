@@ -29,7 +29,7 @@ fi
 ################
 ## Parameters ##
 ################
-FILE_SIZE=10;
+FILE_SIZE="10M";
 NUMBER_OF_FILES=100;
 while getopts "s:n:-:" OPTION; do
   case "${OPTION}" in
