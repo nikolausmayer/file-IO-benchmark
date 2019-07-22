@@ -496,10 +496,10 @@ int main (int argc, char* argv[])
 
   /// Command line options
   optparse::OptionParser parser;
-  parser.add_option("-i", "--infiles")
+  parser.add_option("-i", "--infiles", "--in-files")
         .dest("infiles")
         .help("list of input filenames");
-  parser.add_option("-o", "--outfiles")
+  parser.add_option("-o", "--outfiles", "--out-files")
         .dest("outfiles")
         .help("list of output filenames");
   parser.add_option("-j", "--jobs")
@@ -507,12 +507,12 @@ int main (int argc, char* argv[])
         .set_default("1")
         .dest("jobs")
         .help("number of parallel workers to start");
-  parser.add_option("-s", "--workload-split")
+  parser.add_option("-s", "--workload-split", "--workloadsplit")
         .choices({"separate", "overlap", "same"})
         .set_default("separate")
         .dest("workload-split")
         .help("how files are split between workers ([\"separate\"] / \"overlap\" / \"same\")");
-  parser.add_option("-r", "--randomize-files")
+  parser.add_option("-r", "--randomize-files", "--randomizefiles")
         .action("store_true")
         .set_default(false)
         .dest("randomize")
@@ -522,12 +522,12 @@ int main (int argc, char* argv[])
         .set_default("read")
         .dest("mode")
         .help("Benchmark mode ([\"read\"] / \"write\" / \"readwrite\")");
-  parser.add_option("-w", "--write-size")
+  parser.add_option("-w", "--write-size", "--writesize")
         .type("int")
         .set_default("1048576") /*1MiB*/
         .dest("write-size")
         .help("how many bytes to write per target file if --mode=\"write\"");
-  parser.add_option("-l", "--logfile")
+  parser.add_option("-l", "--logfile", "--log-file")
         .type("string")
         .set_default("log.txt")
         .dest("logfile")
