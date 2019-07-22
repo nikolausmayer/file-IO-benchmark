@@ -47,6 +47,8 @@ $ du -sh ./example-data/*bin
 2,0M    ./example-data/0009.bin
 ```
 
+**iobench** will read all data exactly once, and print some information about reading speed and CPU usage. Its estimate for "average" speed excludes the 5% fastest measurements to counteract sporadic initial caching. Its "lowest speed" estimate exclude the first second's measurements as those tend to suffer from startup overhead.
+
 **iobench** allows for multithreaded testing and measures the speed at which the test files are read. It also measures the actual disk speed to detect caching, and the current CPU usage to detect if the application is constrained by CPU (instead of by I/O as desired).
 
 
