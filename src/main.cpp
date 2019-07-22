@@ -448,7 +448,7 @@ struct Statistificator
   }
 
   /**
-   * Minimum, but ignore the first 2 values because those are often skewed by
+   * Minimum, but ignore the first 2 and the last value because those are often skewed by
    * program init overhead.
    */
   float robustMin() const
@@ -459,7 +459,7 @@ struct Statistificator
     }
 
     float result{std::numeric_limits<float>::max()};
-    for (size_t i = 2; i < m_samples.size(); ++i)
+    for (size_t i = 2; i < m_samples.size() - 1; ++i)
       if (m_samples[i] < result)
         result = m_samples[i];
     return result;
