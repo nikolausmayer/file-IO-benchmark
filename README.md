@@ -44,7 +44,7 @@ $ du -sh ./example-data/*bin
 2,0M    ./example-data/0006.bin
 2,0M    ./example-data/0007.bin
 2,0M    ./example-data/0008.bin
-2,0M    ./example-data/0009.binV
+2,0M    ./example-data/0009.bin
 ```
 
 **iobench** allows for multithreaded testing and measures the speed at which the test files are read. It also measures the actual disk speed to detect caching, and the current CPU usage to detect if the application is constrained by CPU (instead of by I/O as desired).
