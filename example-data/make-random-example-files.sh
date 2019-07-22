@@ -79,7 +79,7 @@ echo "Creating $NUMBER_OF_FILES random files with size $FILE_SIZE each...";
 file_index=0;
 while test $file_index -lt $NUMBER_OF_FILES; do
   printf ".";
-  filename=`printf "%20d.bin" $file_index`;
+  filename=`printf "%020d.bin" $file_index`;
   touch $filename && $SHRED -n 1 -s ${FILE_SIZE} $filename;
   file_index=`expr $file_index + 1`;
 done
