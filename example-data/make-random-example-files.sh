@@ -26,17 +26,61 @@ if test ! -w .; then
 fi
 
 
+################
+## Parameters ##
+################
+FILE_SIZE=10;
+NUMBER_OF_FILES=100;
+while getopts "s:n:-:" OPTION; do
+  case "${OPTION}" in
+    -) 
+      ## Long options using --optionname
+      case "${OPTARG}" in 
+        file-size) 
+          VALUE="${!OPTIND}"; OPTIND=`expr $OPTIND + 1`;
+          FILE_SIZE="${VALUE}";
+          ;;
+        file-size=*) 
+          VALUE="${OPTARG#*=}";
+          FILE_SIZE="${VALUE}";
+          ;;
+        number-of-files) 
+          VALUE="${!OPTIND}"; OPTIND=`expr $OPTIND + 1`;
+          NUMBER_OF_FILES="${VALUE}";
+          ;;
+        number-of-files=*) 
+          VALUE="${OPTARG#*=}";
+          NUMBER_OF_FILES="${VALUE}";
+          ;;
+        *)
+          printf "%s\n" "Unknown option --${OPTARG}";
+          exit `false`;
+          ;;
+      esac
+      ;;
+    s)
+      FILE_SIZE="${OPTARG}";
+      ;;
+    n)   
+      NUMBER_OF_FILES="${OPTARG}";
+      ;;
+    [?]) 
+      exit `false`;
+      ;;
+  esac
+done
+#shift `expr $OPTIND - 1`;
+
+
 #########################
 ## Create random files ##
 #########################
-FILE_SIZE_MB=10;
-NUMBER_OF_FILES=100;
-echo "Creating $NUMBER_OF_FILES random files with $FILE_SIZE_MB MB each...";
+echo "Creating $NUMBER_OF_FILES random files with size $FILE_SIZE each...";
 file_index=0;
 while test $file_index -lt $NUMBER_OF_FILES; do
   printf ".";
   filename=`printf "%20d.bin" $file_index`;
-  touch $filename && $SHRED -n 1 -s ${FILE_SIZE_MB}M $filename;
+  touch $filename && $SHRED -n 1 -s ${FILE_SIZE} $filename;
   file_index=`expr $file_index + 1`;
 done
 printf "\n";
