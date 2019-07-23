@@ -1,4 +1,4 @@
-# iobench
+Di, 23. Juli 2019 um 18:43 Uhr# iobench
 
 **iobench** is a tiny disk-I/O benchmarking tool.
 
@@ -54,7 +54,7 @@ $ du -sh ./example-data/*bin
 
 ## Notes
 
-- **iobench** does not care which kind of files it is given, or how big they are, or how homogeneous. **iobench** only reads the raw file into memory and counts its bytes. It is probably a good idea to **not give iobench files whose size times the number of threads approaches your RAM size**.
+- **iobench** does not care which kind of files it is given, or how big they are, or how homogeneous. **iobench** only reads the raw file into memory (in chunks) and counts its bytes.
 
 - **iobench** cannot detect caching on NFS or otherwise not-directy-attached filesystems (it reads information from `/proc/diskstats`).
 
