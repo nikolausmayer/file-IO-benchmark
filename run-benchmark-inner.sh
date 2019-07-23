@@ -144,7 +144,7 @@ done
 
 
 ## Wrap up results
-tar cfa iobench-results.tar iobench-*.txt;
+tar cfa --remove-files iobench-results.tar iobench-*.txt;
 
 echo "All done!";
 
