@@ -273,8 +273,6 @@ struct Worker {
         return;
       }
 
-      ++m_done;
-
       std::ifstream ifs;
       std::string content;
       std::ofstream ofs;
@@ -283,17 +281,33 @@ struct Worker {
           m_workmode == WorkMode_t::READ_AND_WRITE) {
         /// Open random file
 
+        //std::cout << infilenames[random_index] << std::endl;
         ifs.open(infilenames[random_index], std::ifstream::binary);
         if (ifs.bad() or not ifs.is_open()) {
           std::cerr << "Cannot read" << infilenames[random_index] 
                     << std::endl;
+          ++m_done;
           continue;
         }
         ifs.seekg(0, std::ios_base::end);
         const auto length{ifs.tellg()};
         ifs.seekg(0, std::ios_base::beg);
-        content.resize(length);
-        ifs.read((char*)&(content.c_str()[0]), length);
+        /// Read in chunks
+        long int current_position{0};
+        long int still_to_read{length};
+        while (still_to_read > 0) {
+          /// Maximum chunk size 10MB
+          const long int read_size{std::min(still_to_read, 10*1024*1024l)};
+
+          content.resize(read_size);
+          ifs.read((char*)&(content.c_str()[0]), read_size);
+
+          current_position += read_size;
+          still_to_read -= read_size;
+
+          /// Log data
+          m_data_throughput_logger.AddSample(read_size);
+        }
 
         //ifs.open(infilenames[random_index], std::ifstream::binary);
         //if (ifs.bad() or not ifs.is_open()) {
@@ -318,6 +332,8 @@ struct Worker {
         }
         ofs.write(content.c_str(), content.size());
         ofs.close();
+        /// Log data
+        m_data_throughput_logger.AddSample(content.size());
       }
       if (m_workmode == WorkMode_t::READ_AND_WRITE) {
         ofs.open(outfilenames[random_index], std::ofstream::binary);
@@ -328,10 +344,11 @@ struct Worker {
         }
         ofs.write(content.c_str(), content.size());
         ofs.close();
+        /// Log data
+        m_data_throughput_logger.AddSample(content.size());
       }
-      
-      /// Log data
-      m_data_throughput_logger.AddSample(content.size());
+
+      ++m_done;
     }
 
     m_status = WorkerStatus_t::FINISHED;
@@ -613,20 +630,29 @@ int main (int argc, char* argv[])
 
   /// Create workers
   std::vector<Worker> workers;
-  const size_t num_workers{static_cast<size_t>(std::stoi(options["jobs"]))};
+  const size_t njobs{static_cast<size_t>(std::stoi(options["jobs"]))};
+  const size_t num_workers{std::min(njobs, file_indices.size())};
+  if (num_workers < njobs) {
+    std::cout << "! Option --jobs=" << njobs << " was specified, but we only"
+              << " have " << file_indices.size() << " files to read. Falling"
+              << " back to " << file_indices.size() << " jobs..." << std::endl;
+  }
   std::cout << "Spawning " << num_workers << " worker threads..." << std::endl;
   if (options["workload-split"] == "separate") {
     /// Distribute work equally among all workers
     std::cout << "Workload will be equally distributed among all workers."
               << std::endl;
-    const size_t slice_size{file_indices.size() / num_workers};
+    const float slice_size{static_cast<float>(file_indices.size()) / 
+                           num_workers};
+    float current_slice_begin{0.f};
+    float current_slice_end{0.f};
     for (size_t i = 0; i < num_workers; ++i) {
-      size_t slice_point_a{slice_size * i};
-      size_t slice_point_b{std::min(slice_size * (i + 1) - 1,
-                                    file_indices.size())};
-      std::vector<int> slice(file_indices.begin() + slice_point_a,
-                             file_indices.begin() + slice_point_b);
-      workers.emplace_back(std::move(Worker{slice}));
+      current_slice_begin = current_slice_end;
+      current_slice_end   = std::min(current_slice_begin + slice_size,
+                                     static_cast<float>(file_indices.size()));
+      std::vector<int> slice(file_indices.begin() + current_slice_begin,
+                             file_indices.begin() + current_slice_end);
+      workers.push_back(Worker{slice});
     }
   } else if (options["workload-split"] == "overlap") {
     /// All workers use the same data, but each worker uses an individual
@@ -635,12 +661,12 @@ int main (int argc, char* argv[])
               << std::endl;
     std::vector<int> copy{file_indices};
     std::shuffle(copy.begin(), copy.end(), RNG);
-    workers.emplace_back(std::move(Worker{copy}));
+    workers.push_back(Worker{copy});
   } else if (options["workload-split"] == "same") {
     /// All workers use the same data sequence
     std::cout << "Workload is exactly the same for all workers." << std::endl;
     for (size_t i = 0; i < num_workers; ++i) {
-      workers.emplace_back(std::move(Worker{file_indices}));
+      workers.push_back(Worker{file_indices});
     }
   } else {
     std::cerr << "Unhandled choice for \"workload-split\"" << std::endl;
@@ -704,7 +730,7 @@ int main (int argc, char* argv[])
               << "CPU usage\t"
               << "CPU usage\t"
               << std::endl;
-    std::cout << "\t\t"
+    std::cout << "(files done)\t"
               << "(total)\t\t"
               << "(per worker)\t"
               << "(total)\t\t"
