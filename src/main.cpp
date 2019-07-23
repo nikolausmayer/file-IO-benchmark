@@ -29,6 +29,14 @@
 #include "TextDecorator.h"
 #include "Timer.h"
 
+#ifdef WITH_TEXTDECORATOR
+  #define RED(x) TD.red(x)
+  #define BOLD(x) TD.bold(x)
+#else
+  #define RED(x) x
+  #define BOLD(x) x
+#endif
+
 
 
 static std::vector<std::string> infilenames;
@@ -609,15 +617,15 @@ int main (int argc, char* argv[])
 
 
   if (options["mode"] == "read") {
-    std::cout << TD.bold("READ") << " mode." << std::endl;
+    std::cout << BOLD("READ") << " mode." << std::endl;
   } else if (options["mode"] == "write") {
-    std::cout << TD.bold("WRITE") << " mode." << std::endl;
+    std::cout << BOLD("WRITE") << " mode." << std::endl;
   } else if (options["mode"] == "readwrite") {
-    std::cout << TD.bold("READ-WRITE") << " mode." << std::endl;
+    std::cout << BOLD("READ-WRITE") << " mode." << std::endl;
   }
 
 
-  std::cout << "Parsed " << TD.bold(file_indices.size()) << " entries."
+  std::cout << "Parsed " << BOLD(file_indices.size()) << " entries."
             << std::endl;
 
   auto RNG = std::default_random_engine{std::random_device{}()};
@@ -798,7 +806,7 @@ int main (int argc, char* argv[])
 
       std::cout << std::setw(7) << std::setprecision(2) << std::fixed
                 << static_cast<float>(100*done_sum)/infilenames.size() << "%\t"
-                << TD.bold(oss.str() + " MB/s") << "\t"
+                << BOLD(oss.str() + " MB/s") << "\t"
                 << std::setw(7) << std::setprecision(1) << std::fixed
                 << throughput_sum / (1024*1024) / active_workers << " MB/s\t"
                 << std::setw(7) << std::setprecision(1) << std::fixed
@@ -809,7 +817,7 @@ int main (int argc, char* argv[])
       /// Check if benchmarking is constrained by CPU (which would be bad)
       //if (cpu_usage >= 0.9*cpu_info.getNumberOfCPUs()) {
       if (cpu_usage >= 0.9*active_workers) {
-        std::cout << "     " << TD.red(TD.bold("!!!")) << " " 
+        std::cout << "     " << RED(BOLD("!!!")) << " " 
                   << "(benchmark might be CPU-constrained; use more workers!)"
                   << std::endl;
       }
@@ -818,7 +826,7 @@ int main (int argc, char* argv[])
       disks_info.update();
       const size_t actual_disk_speed{disks_info.getFastestDiskRead()};
       if (throughput_sum > 1.1 * actual_disk_speed) {
-        std::cout << "     " << TD.red(TD.bold("!!!")) << " " 
+        std::cout << "     " << RED(BOLD("!!!")) << " " 
                   << "(actual disk reading is much slower ("
                   << actual_disk_speed / (1024*1024) << "MB/s); "
                   << "data may be cached!)"
@@ -846,11 +854,11 @@ int main (int argc, char* argv[])
             << std::endl;
   const float avg_read_speed{read_speed_log.robustAverage()/(1024*1024)};
   std::cout << "Average cumulative reading speed: " 
-            << TD.red(TD.bold(avg_read_speed)) << TD.red(TD.bold(" MB/s"))
+            << RED(BOLD(avg_read_speed)) << RED(BOLD(" MB/s"))
             << std::endl;
   const float min_read_speed{read_speed_log.robustMin()/(1024*1024)};
   std::cout << "Minimum cumulative reading speed: " 
-            << TD.red(TD.bold(min_read_speed)) << TD.red(TD.bold(" MB/s"))
+            << RED(BOLD(min_read_speed)) << RED(BOLD(" MB/s"))
             << std::endl;
             
                     
