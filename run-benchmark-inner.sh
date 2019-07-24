@@ -61,6 +61,7 @@ printf "%d GB RAM detected.\n" "$RAM_GB";
 
 ## Check location of IOBENCH
 FOLDER=`dirname "$0"`;
+FOLDER=`realpath "$FOLDER"`;
 if test ! -d "$FOLDER"; then
   read -r -p "We can't seem to find the location of IOBENCH... please give us its folder: " FOLDER;
 fi
