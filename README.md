@@ -1,5 +1,3 @@
-Di, 23. Juli 2019 um 18:43 Uhr# iobench
-
 **iobench** is a tiny disk-I/O benchmarking tool.
 
 ## Building
